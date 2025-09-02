@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Progres săptămânal</h3>
+  <a class="btn btn-outline-primary" href="{{ url_for('init_db') }}">(Re)Inițializează planul 4 săptămâni</a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+      <div class="me-auto">
+        <h5 class="mb-1">Vizualizare 3D – zona lombară</h5>
+        <small class="text-muted">Rotire: drag, Zoom: scroll, Pan: right-drag</small>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <label for="painRange" class="form-label mb-0">Durere (0–10)</label>
+        <input id="painRange" type="range" min="0" max="10" step="1" value="2" class="form-range" style="width:220px">
+        <span id="painValue" class="badge text-bg-danger">2</span>
+      </div>
+    </div>
+    <div id="viewer3d" style="width:100%; height:420px; background:#f7f7f7; border-radius:12px; position:relative; overflow:hidden;"></div>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for w in weeks %}
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">Săptămâna {{ w.number }}</h5>
+        <p class="card-text">Exerciții Luni–Vineri conform planului.</p>
+        <a href="{{ url_for('view_week', number=w.number) }}" class="btn btn-primary">Deschide</a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+    <div class="col-12"><em>Nu există săptămâni încă. Apasă „(Re)Inițializează”.</em></div>
+  {% endfor %}
+</div>
+
+<!-- Three.js global + OrbitControls (non-module) -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  // Elemente UI
+  const container = document.getElementById('viewer3d');
+  const painRange = document.getElementById('painRange');
+  const painValue = document.getElementById('painValue');
+
+  // Scenă
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xf7f7f7);
+
+  const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+  camera.position.set(2.2, 1.8, 3.2);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  container.appendChild(renderer.domElement);
+
+  // Lumini
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.0);
+  hemi.position.set(0, 1, 0);
+  scene.add(hemi);
+
+  const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+  dir.position.set(3, 6, 5);
+  scene.add(dir);
+
+  // Controls
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.target.set(0, 1.1, 0);
+
+  // Helper creație box
+  function mk(w,h,d,color=0xdadada) {
+    const g = new THREE.BoxGeometry(w,h,d);
+    const m = new THREE.MeshStandardMaterial({ color: color, metalness:0, roughness:0.9 });
+    return new THREE.Mesh(g,m);
+  }
+
+  // Corp simplificat
+  const root = new THREE.Group();
+  scene.add(root);
+
+  const pelvis = mk(0.35, 0.18, 0.22, 0xcfcfcf); pelvis.position.set(0, 1.0, 0);
+  root.add(pelvis);
+
+  const lumbarMat = new THREE.MeshStandardMaterial({ color: 0xff5555, emissive: 0x000000, roughness:0.6, metalness:0 });
+  const lumbar = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.22, 0.18), lumbarMat);
+  lumbar.position.set(0, 1.2, 0);
+  root.add(lumbar);
+
+  const thoracic = mk(0.32, 0.45, 0.20); thoracic.position.set(0, 1.5, 0);
+  const chest    = mk(0.36, 0.20, 0.22); chest.position.set(0, 1.8, 0);
+  root.add(thoracic, chest);
+
+  const neck = mk(0.12, 0.10, 0.12); neck.position.set(0, 1.95, 0);
+  const head = mk(0.22, 0.26, 0.22, 0xd8d8d8); head.position.set(0, 2.15, 0);
+  root.add(neck, head);
+
+  const upperArmL = mk(0.10, 0.26, 0.10); upperArmL.position.set(-0.28, 1.78, 0);
+  const upperArmR = mk(0.10, 0.26, 0.10); upperArmR.position.set( 0.28, 1.78, 0);
+  const forearmL  = mk(0.09, 0.24, 0.09); forearmL.position.set(-0.28, 1.55, 0);
+  const forearmR  = mk(0.09, 0.24, 0.09); forearmR.position.set( 0.28, 1.55, 0);
+  root.add(upperArmL, upperArmR, forearmL, forearmR);
+
+  const thighL = mk(0.14, 0.40, 0.14); thighL.position.set(-0.12, 0.75, 0);
+  const thighR = mk(0.14, 0.40, 0.14); thighR.position.set( 0.12, 0.75, 0);
+  const shinL  = mk(0.12, 0.38, 0.12); shinL.position.set(-0.12, 0.38, 0);
+  const shinR  = mk(0.12, 0.38, 0.12); shinR.position.set( 0.12, 0.38, 0);
+  root.add(thighL, thighR, shinL, shinR);
+
+  root.rotation.y = Math.PI * 0.1;
+
+  // Mapare durere -> culoare/emisie/scală
+  function updatePain(v) {
+    const val = Math.max(0, Math.min(10, Number(v) || 0));
+    painValue.textContent = String(val);
+    const t = val / 10;
+    const r = 0.8 + 0.2*t;
+    const g = 0.45 * (1 - t);
+    lumbarMat.color = new THREE.Color(r, g, g);
+    lumbarMat.emissive = new THREE.Color(r * 0.6 * t, 0.05 * t, 0.05 * t);
+    lumbar.scale.set(1 + 0.05*t, 1 + 0.05*t, 1 + 0.05*t);
+  }
+  updatePain(painRange.value);
+  painRange.addEventListener('input', () => updatePain(painRange.value));
+
+  // Resize
+  window.addEventListener('resize', () => {
+    const w = container.clientWidth, h = container.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  });
+
+  // Loop
+  (function tick() {
+    controls.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(tick);
+  })();
+})();
+</script>
+{% endblock %}

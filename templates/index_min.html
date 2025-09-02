@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="ro">
+  <head><meta charset="utf-8"><title>Test</title></head>
+  <body style="font-family: system-ui, sans-serif; padding:24px">
+    <h1>Funcționează ✅</h1>
+    <p>Dacă vezi asta, problema e în `base.html`/extindere.</p>
+    <p><a href="{{ url_for('init_db') }}">(Re)Inițializează planul 4 săptămâni</a></p>
+    <ul>
+      {% for w in weeks %}<li>Săptămâna {{ w.number }}</li>{% endfor %}
+    </ul>
+  </body>
+</html>
